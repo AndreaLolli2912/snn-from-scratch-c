@@ -1,67 +1,54 @@
 // main.c
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-
 #include "net.h"
+#include "dataset.h"
 #include "utils.h"
 
-static void print_vec(const char *name, const float *v, int n) {
-    printf("%s = [", name);
-    for (int i = 0; i < n; ++i) printf("%s%.6f", (i ? ", " : ""), v[i]);
-    printf("]\n");
-}
+#include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include <time.h>
+
+static int   N_SAMPLES   = 10;
+static int   NUM_INPUTS  = 20;
+static int   NUM_HIDDEN  = 21;
+static int   NUM_OUTPUTS = 200;
+static int   NUM_STEPS   = 25;
+static float THRESHOLD_HIDDEN = 0.45f;
+static float THRESHOLD_OUTPUT = 0.75f;
+static float BETA_HIDDEN      = 0.8f;
+static float BETA_OUTPUT      = 0.4f;
 
 int main(void) {
-    // deterministic init so results are reproducible
-    srand(1234);
 
-    // 1) make a net
-    Net net;
-    init_net(&net);
 
-    // 2) add one Linear layer: 4 -> 3 with bias
-    const int in_features  = 4;
-    const int out_features = 3;
-    const int use_bias     = 1;
+    srand(time(NULL));
 
-    if (!net.add_linear_layer(&net, in_features, out_features, use_bias)) {
-        fprintf(stderr, "failed to add linear layer\n");
-        return 1;
-    }
-    printf("layers after add = %zu\n", net.n_layers);
+    float *ppg = malloc(sizeof *ppg * N_SAMPLES * NUM_INPUTS);
+    gen_rnd_std_ppg_signals(ppg, N_SAMPLES * NUM_INPUTS);
 
-    // 3) prepare input x and output y, run forward
-    float x[4] = { 1.0f, -2.0f, 0.5f, 3.0f };
-    float y[3] = { 0 };
+    printf("First sample\n[%.6f", ppg[0]);
+    for (int i = 1; i < NUM_INPUTS; ++i) printf(", %.6f", ppg[i]);
+    printf("]\n");
 
-    Layer *L = &net.layers[0];
-    if (!L->forward(L->ptr, x, y)) {
-        fprintf(stderr, "forward failed\n");
-        return 1;
-    }
-    print_vec("x", x, in_features);
-    print_vec("y", y, out_features);
+    free(ppg);
 
-    // 4) quick capacity growth smoke test: add few more linear layers (small sizes)
-    for (int k = 0; k < 5; ++k) {
-        if (!net.add_linear_layer(&net, 2, 2, 0)) {
-            fprintf(stderr, "failed to add layer #%d\n", k+2);
-            return 1;
-        }
-    }
-    printf("layers after growth = %zu (capacity=%zu)\n", net.n_layers, net.capacity);
+    /*
+    // data preparation
 
-    // 5) delete layers one by one (calls the right destructor)
-    while (net.n_layers) {
-        net.delete_last_layer(&net);
-    }
-    printf("layers after delete = %zu\n", net.n_layers);
+    // model creation
+    int use_bias = 1; // Linear layer bias
 
-    // free the array itself (net_reserve used realloc)
-    free(net.layers);
-    net.layers = NULL;
-    net.capacity = 0;
+    Net *net; // net --- freed.
+    init_net(net);
+    net->add_linear_layer(net, NUM_INPUTS, NUM_HIDDEN, use_bias); // net.fc1 --- freed
+    net->add_leaky_layer(net, BETA_HIDDEN, THRESHOLD_HIDDEN);
+    net->add_linear_layer(net, NUM_HIDDEN, NUM_OUTPUTS, use_bias);
+    net->add_leaky_layer(net, BETA_OUTPUT, THRESHOLD_OUTPUT);
+
+
+    net->del_net(net);
+    free(net); // free net
+    */
 
     return 0;
 }

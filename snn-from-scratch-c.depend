@@ -1,0 +1,34 @@
+# depslib dependency file v1.0
+1757349656 source:c:\cbprojects\snn-from-scratch-c\utils.c
+	"utils.h"
+	<stdlib.h>
+	<stddef.h>
+
+1757349883 c:\cbprojects\snn-from-scratch-c\utils.h
+
+1757345638 source:c:\cbprojects\snn-from-scratch-c\net.c
+	"utils.h"
+	<stdio.h>
+	<stdlib.h>
+	<math.h>
+
+1757349703 source:c:\cbprojects\snn-from-scratch-c\main.c
+	"net.h"
+	"dataset.h"
+	"utils.h"
+	<stdio.h>
+	<stdlib.h>
+	<stddef.h>
+	<time.h>
+
+1757344508 c:\cbprojects\snn-from-scratch-c\net.h
+	<stddef.h>
+
+1757345912 source:c:\cbprojects\snn-from-scratch-c\dataset.c
+	"utils.h"
+	<stdio.h>
+	<stdlib.h>
+
+1757350027 c:\cbprojects\snn-from-scratch-c\dataset.h
+	<stddef.h>
+
