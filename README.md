@@ -7,7 +7,7 @@ Linear -> LeakyIF -> Linear -> LeakyIF
 ```
 
 Inputs in `[0,1]` are converted to Bernoulli spike trains (rate coding), then unrolled over time.
-The project covers part of the deploy of a Spiking Neural Network on the PULP platform.
+The project covers part of the deploymentof a Spiking Neural Network on the PULP platform.
 
 ## Layout
 
