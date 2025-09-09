@@ -31,6 +31,10 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="dataset.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="dataset.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -38,6 +42,14 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="net.h" />
+		<Unit filename="spikegen.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="spikegen.h" />
+		<Unit filename="utils.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="utils.h" />
 		<Extensions />
 	</Project>
 </CodeBlocks_project_file>

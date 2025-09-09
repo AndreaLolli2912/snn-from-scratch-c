@@ -1,20 +1,13 @@
 // net.c
+#include "net.h"
 #include "utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 /* ================ STRUCTURE ================ */
-typedef enum { LAYER_LINEAR, LAYER_LEAKY } LayerKind;
-
-typedef struct {
-    LayerKind kind;
-    void *ptr;
-    int (*forward) (void *ptr, const float *in, float *out);
-    int (*del)     (void *ptr);
-} Layer;
-
 typedef struct {
     int in_features, out_features, use_bias;
     float *weight;
@@ -27,31 +20,19 @@ typedef struct {
     float *membrane;
 } Leaky;
 
-typedef struct Net {
-    size_t n_layers;
-    size_t capacity;
-    Layer *layers;
-
-    int (*add_linear_layer)  (struct Net *self, int in_features, int out_features, int use_bias);
-    int (*add_leaky_layer)   (struct Net *self, float beta, float threshold);
-    int (*delete_last_layer) (struct Net *self);
-    void (*del_net)          (struct Net *self);
-} Net;
-
-
 /* ================ LINEAR METHODS ================*/
-int linear_layer_forward(void *ptr, const float *in, float *out)
+static int linear_layer_forward(void *ptr, const float *in, float *out)
 {
     if (!ptr || !in || !out) return 0;
     Linear *lin = (Linear*)ptr;
-    const int in_f  = lin->in_features;
-    const int out_f = lin->out_features;
+    const size_t in_f  = lin->in_features;
+    const size_t out_f = lin->out_features;
 
-    for (int o = 0; o < out_f; ++o) {
+    for (size_t o = 0; o < out_f; ++o) {
+        size_t row = o * in_f;
         float acc = 0.0f;
-        const size_t row = (size_t)o * (size_t)in_f;
-        for (int i = 0; i < in_f; ++i) {
-            acc += lin->weight[row + (size_t)i] * in[i];
+        for (size_t i = 0; i < in_f; ++i) {
+            acc += lin->weight[row + i] * in[i];
         }
         if (lin->use_bias && lin->bias) acc += lin->bias[o];
         out[o] = acc;
@@ -59,7 +40,7 @@ int linear_layer_forward(void *ptr, const float *in, float *out)
     return 1;
 }
 
-int linear_layer_del(void *ptr)
+static int linear_layer_del(void *ptr)
 {
     if (!ptr) return 1;
     Linear *linear = (Linear*)ptr;
@@ -72,7 +53,7 @@ int linear_layer_del(void *ptr)
 }
 
 /* ================ LEAKY METHODS ================*/
-int leaky_layer_forward (void *ptr, const float *in, float *out)
+static int leaky_layer_forward (void *ptr, const float *in, float *out)
 {
     if (!ptr || !in || !out) return 0;
     Leaky *leaky = (Leaky*)ptr;
@@ -87,7 +68,7 @@ int leaky_layer_forward (void *ptr, const float *in, float *out)
     return 1;
 }
 
-int leaky_layer_del(void *ptr)
+static int leaky_layer_del(void *ptr)
 {
     if (!ptr) return 1;
     Leaky *leaky = (Leaky*)ptr;
@@ -97,8 +78,19 @@ int leaky_layer_del(void *ptr)
     return 1;
 }
 
+static int leaky_layer_reset(void *ptr)
+{
+    if (!ptr) return 0;
+    Leaky* leaky = (Leaky*)ptr;
+    if (!leaky || !leaky->membrane) return 0;
+    for (size_t k = 0; k < leaky->n; k++) {
+        leaky->membrane[k] = 0.0f;
+    }
+    return 1;
+}
+
 /* ================ LAYER CONSTRUCTORS ================ */
-int init_linear_layer (Layer *layer, int in_features, int out_features, int use_bias)
+static int init_linear_layer (Layer *layer, int in_features, int out_features, int use_bias)
 {
     // verify arguments
     if (!layer) {
@@ -157,10 +149,11 @@ int init_linear_layer (Layer *layer, int in_features, int out_features, int use_
     layer->ptr = linear;
     layer->forward = linear_layer_forward;
     layer->del     = linear_layer_del;
+    layer->reset   = NULL;
     return 1;
 }
 
-int init_leaky_layer (Layer *layer, size_t n, float beta, float threshold)
+static int init_leaky_layer (Layer *layer, size_t n, float beta, float threshold)
 {
     if (!layer) {
         fprintf(stderr, "init_leaky_layer(): 'layer' is NULL\n");
@@ -204,6 +197,7 @@ int init_leaky_layer (Layer *layer, size_t n, float beta, float threshold)
     layer->ptr = leaky;
     layer->forward = leaky_layer_forward;
     layer->del     = leaky_layer_del;
+    layer->reset   = leaky_layer_reset;
     return 1;
 }
 
@@ -285,8 +279,74 @@ int delete_last_layer (Net *net)
     return 1;
 }
 
-void net_forward(Net *net, const float *in, float *out, int time_steps)
+int net_forward(Net *net, const float *in, float *out, size_t n_steps, size_t n_samples, size_t n_inputs)
 {
+    if (!net || net->n_layers == 0 || !in || !out || n_steps == 0 || n_samples == 0 || n_inputs == 0) return 0;
+
+    size_t maxw = n_inputs;
+    size_t expect_in = n_inputs;
+
+    for (size_t k = 0; k < net->n_layers; ++k) {
+        Layer *L = &net->layers[k];
+        if (L->kind == LAYER_LINEAR) {
+            Linear *P = (Linear*)L->ptr;
+            if ((size_t)P->in_features != expect_in) {
+                fprintf(stderr, "net_forward(): layer %zu expects %zu, got %zu\n", k, (size_t)P->in_features, expect_in);
+                return 0;
+            }
+            expect_in = (size_t)P->out_features;
+            if (expect_in > maxw) maxw = expect_in;
+        } else { // LAYER_LEAKY
+            Leaky *Q = (Leaky*)L->ptr;
+            if (Q->n != expect_in) {
+                fprintf(stderr, "net_forward(): leaky %zu size %zu != prev width %zu\n", k, Q->n, expect_in);
+                return 0;
+            }
+        }
+    }
+    size_t out_dim = expect_in; // final output width (last layer)
+
+    float *bufA = malloc(maxw * sizeof *bufA);
+    float *bufB = malloc(maxw * sizeof *bufB);
+
+    if (!bufA || !bufB) {
+        free(bufA);
+        free(bufB);
+        return 0;
+    }
+
+    for (size_t s = 0; s < n_samples; s++){
+        // reset layers membrane for each sample
+        for (size_t k = 0; k < net->n_layers; ++k) {
+            Layer *L = &net->layers[k];
+            if (L->kind == LAYER_LEAKY && L->reset) {
+                L->reset(L->ptr);
+            }
+        }
+        for (size_t t = 0; t < n_steps; t++) {
+            const float *in_pin  = in  + s*(n_steps*n_inputs) + t*n_inputs;
+            float *out_pin = out + s*(n_steps*out_dim) + t*out_dim;
+            memcpy(bufA, in_pin, n_inputs * sizeof *bufA);
+
+            size_t curW = n_inputs;
+            for (size_t layer_idx = 0; layer_idx < net->n_layers; layer_idx++){
+                Layer *L = &net->layers[layer_idx];
+                if (!L->forward(L->ptr, bufA, bufB)){
+                    free(bufA);
+                    free(bufB);
+                    return 0;
+                }
+                curW = (L->kind == LAYER_LINEAR)
+                   ? (size_t)((Linear*)L->ptr)->out_features
+                   : ((Leaky*)L->ptr)->n;
+                float *tmp = bufA; bufA = bufB; bufB = tmp;
+            }
+            memcpy(out_pin, bufA, curW * sizeof *out_pin);
+        }
+    }
+    free(bufA);
+    free(bufB);
+    return 1;
 }
 
 /* ================ NET DECONSTRUCTOR ================ */

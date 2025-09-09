@@ -1,10 +1,5 @@
 #include "spikegen.h"
-#include "utils.h"  // urand01()
-
-static inline size_t idx_tsni(size_t t, size_t s, size_t n,
-                              size_t S, size_t N) {
-    return t*(S*N) + s*N + n;
-}
+#include "utils.h"  // urand01(), idx_tsni()
 
 void spikegen_rate(const float *in, float *out,
                    size_t T, size_t S, size_t N)

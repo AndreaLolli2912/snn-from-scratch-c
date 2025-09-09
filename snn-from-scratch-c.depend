@@ -1,34 +1,43 @@
 # depslib dependency file v1.0
-1757349656 source:c:\cbprojects\snn-from-scratch-c\utils.c
+1757403684 source:c:\cbprojects\snn-from-scratch-c\utils.c
 	"utils.h"
 	<stdlib.h>
 	<stddef.h>
 
-1757349883 c:\cbprojects\snn-from-scratch-c\utils.h
+1757414868 c:\cbprojects\snn-from-scratch-c\utils.h
+	<stddef.h>
 
-1757345638 source:c:\cbprojects\snn-from-scratch-c\net.c
+1757433172 source:c:\cbprojects\snn-from-scratch-c\net.c
+	"net.h"
 	"utils.h"
 	<stdio.h>
 	<stdlib.h>
+	<string.h>
 	<math.h>
 
-1757349703 source:c:\cbprojects\snn-from-scratch-c\main.c
+1757433077 source:c:\cbprojects\snn-from-scratch-c\main.c
 	"net.h"
 	"dataset.h"
+	"spikegen.h"
 	"utils.h"
 	<stdio.h>
 	<stdlib.h>
-	<stddef.h>
 	<time.h>
 
-1757344508 c:\cbprojects\snn-from-scratch-c\net.h
+1757432353 c:\cbprojects\snn-from-scratch-c\net.h
 	<stddef.h>
 
-1757345912 source:c:\cbprojects\snn-from-scratch-c\dataset.c
+1757349956 source:c:\cbprojects\snn-from-scratch-c\dataset.c
+	"dataset.h"
 	"utils.h"
-	<stdio.h>
-	<stdlib.h>
 
 1757350027 c:\cbprojects\snn-from-scratch-c\dataset.h
 	<stddef.h>
+
+1757404155 c:\cbprojects\snn-from-scratch-c\spikegen.h
+	<stddef.h>
+
+1757404128 source:c:\cbprojects\snn-from-scratch-c\spikegen.c
+	"spikegen.h"
+	"utils.h"
 
